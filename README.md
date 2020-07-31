@@ -47,6 +47,9 @@ git clone https://github.com/dheerajrox/AReasonToLive.git
 ```
 
 Open a command line and navigate to the root directory
+```bash
+cd AReasonToLive
+```
 then use the following commands to start the back-end.
 ```bash
 cd back-end
@@ -57,6 +60,9 @@ Server running at http://127.0.0.1:5000/
 
 
 Open another command line and navigate to the root directory
+```bash
+cd AReasonToLive
+```
 then use the following commands to start the front-end.
 ```bash
 cd front-end
