@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import Header from "../parts/Header";
 import axios from "axios";
-import { Container } from "react-bootstrap";
+
 import StoryCard from "../parts/StoryCard";
 import SimilarStories from "../parts/SimilarStories";
 import Pagination from "../parts/Pagination";
@@ -15,17 +15,39 @@ export class SearchPage extends Component {
   };
 
   componentDidMount() {
+    console.log("Hello");
+    var query = this.props.match.params.query;
+
     const getPosts = async () => {
       this.setState({ loading: true });
-      const results = await axios.get(
-        "https://jsonplaceholder.typicode.com/posts"
-      );
-      this.setState({ posts: results.data.slice(0, 20) });
-      this.setState({ loading: false });
-      console.log(results.data);
+      axios.post("/posts").then((results) => {
+        this.setState({ posts: results["data"]["data_new"] });
+        this.setState({ loading: false });
+        console.log(results["data"]["data_new"]);
+      });
     };
 
-    getPosts();
+    const getPostsnew = () => {
+      this.setState({ loading: true });
+      axios
+        .post("/similar-posts", {
+          query: query,
+        })
+        .then((results) => {
+          this.setState({ posts: results["data"]["data_new"] });
+          this.setState({ loading: false });
+          console.log(results["data"]["data_new"]);
+        });
+    };
+
+    if (query !== "all") {
+      getPostsnew();
+    } else {
+      getPosts();
+    }
+
+    // getPosts();
+    getPostsnew();
   }
 
   render() {
@@ -33,7 +55,16 @@ export class SearchPage extends Component {
 
     const indexOfLastPost = currentPage * postsPerPage;
     const indexOfFirstPort = indexOfLastPost - postsPerPage;
-    const currentPosts = posts.slice(indexOfFirstPort, indexOfLastPost);
+
+    var posts_new = [];
+
+    for (var key in posts) {
+      if (posts.hasOwnProperty(key)) {
+        posts_new.push(posts[key]);
+      }
+    }
+
+    const currentPosts = posts_new.slice(indexOfFirstPort, indexOfLastPost);
 
     const paginate = (pageNum) => this.setState({ currentPage: pageNum });
 
@@ -41,10 +72,10 @@ export class SearchPage extends Component {
     for (var key1 in currentPosts) {
       listItems.push(
         <StoryCard
-          key={currentPosts[key1]["id"]}
-          body={currentPosts[key1]["title"]}
-          sol={currentPosts[key1]["body"]}
-          user={currentPosts[key1]["userId"]}
+          key={key1}
+          body={currentPosts[key1]["body"]}
+          sol={currentPosts[key1]["sol"]}
+          user={currentPosts[key1]["username"]}
           likes={20}
         />
       );
@@ -56,7 +87,7 @@ export class SearchPage extends Component {
         <SimilarStories posts={listItems} loading={loading} />
         <Pagination
           postsPerPage={postsPerPage}
-          totalPosts={posts.length}
+          totalPosts={posts_new.length}
           paginate={paginate}
         />
       </>

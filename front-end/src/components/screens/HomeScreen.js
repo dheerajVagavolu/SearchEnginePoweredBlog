@@ -1,14 +1,15 @@
 import React from "react";
 
-import Header from "../parts/Header";
-
 import SearchBar from "../parts/SearchBar";
+import Home2 from "../parts/Home2";
+import Home0 from "../parts/Home0";
 
 const HomeScreen = () => {
   return (
     <>
-      <Header />
+      <Home0 />
       <SearchBar />
+      <Home2 />
     </>
   );
 };

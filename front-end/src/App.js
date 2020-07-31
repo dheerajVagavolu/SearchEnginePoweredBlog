@@ -4,8 +4,6 @@ import HomeScreen from "./components/screens/HomeScreen";
 import LoginScreen from "./components/screens/LoginScreen";
 import UserProfile from "./components/screens/UserProfile";
 
-import ErrorScreen from "./components/screens/ErrorScreen";
-
 import SearchPage from "./components/screens/SearchPage";
 
 import { BrowserRouter, Route } from "react-router-dom";
@@ -19,21 +17,19 @@ function App() {
         <HomeScreen />
       </Route>
 
-      <Route path="/login">
+      <Route exact path="/login">
         <LoginScreen />
       </Route>
 
-      <Route path="/profile">
+      <Route exact path="/profile">
         <UserProfile />
       </Route>
 
-      <Route path="/addstory">
+      <Route exact path="/addstory">
         <AddStoryScreen />
       </Route>
 
-      <Route path="/SearchPage">
-        <SearchPage />
-      </Route>
+      <Route exact path="/SearchPage/:query" component={SearchPage} />
     </BrowserRouter>
   );
 }

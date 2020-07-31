@@ -12,12 +12,6 @@ export class Pagination extends Component {
     return (
       <nav>
         <ul className="pagination justify-content-center">
-          <li className="page-item">
-            <a className="page-link" href="#">
-              Previous
-            </a>
-          </li>
-
           {pageNumbers.map((num) => (
             <li className="page-item" key={num}>
               <a onClick={() => paginate(num)} className="page-link" href="#">
@@ -25,12 +19,6 @@ export class Pagination extends Component {
               </a>
             </li>
           ))}
-
-          <li className="page-item">
-            <a className="page-link" href="#">
-              Next
-            </a>
-          </li>
         </ul>
       </nav>
     );

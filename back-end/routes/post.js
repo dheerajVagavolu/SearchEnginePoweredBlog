@@ -1,92 +1,85 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const Post = mongoose.model("Post");
-const User = mongoose.model("User");
 
 const math = require("mathjs");
 const tf = require("@tensorflow/tfjs-node");
 const tf2 = require("@tensorflow-models/universal-sentence-encoder");
 
+var db2;
+
+var Cloudant = require("@cloudant/cloudant");
+var cloudant = new Cloudant({
+  url:
+    "https://ebf81ffa-f300-43f4-a6d7-140b8505d090-bluemix.cloudantnosqldb.appdomain.cloud",
+  plugins: {
+    iamauth: { iamApiKey: "nx2eB5eSVybnvafAR1gjcTKevHeMKIugjZu3Injva22w" },
+  },
+});
+
+var dbCredentials = {
+  dbName: "posts",
+};
+
+db2 = cloudant.use(dbCredentials.dbName);
+
 // Get All Posts
 router.get("/posts", (req, res) => {
-  Post.find()
-    .then((posts) => {
-      res.json({ posts });
-    })
-    .catch((err) => {
-      console.log(err);
-    });
-});
-
-// Get Top Posts
-router.get("/top-posts", (req, res) => {
-  Post.find()
-    .sort({ likes: -1 })
-    .then((posts) => {
-      res.json({ posts });
-    })
-    .catch((err) => {
-      console.log(err);
-    });
-});
-
-// Get Fresh Posts
-router.get("/fresh-posts", (req, res) => {
-  Post.find()
-    .sort({ _id: -1 })
-    .limit(3)
-    .then((posts) => {
-      res.json({ posts });
-    })
-    .catch((err) => {
-      console.log(err);
-    });
+  db2.list({ include_docs: true }, function (err, data) {
+    res.json(data);
+    console.log(err, data);
+  });
 });
 
 // Get Similar Posts
 router.post("/similar-posts", (req, res) => {
-  Post.find()
-    .then((posts) => {
-      tf2.load().then((model) => {
-        var a = [];
-        const { query } = req.body;
-        const sentences = [query];
-        console.log(sentences);
-        model
-          .embed(sentences)
-          .then(async (embeddings) => {
-            const vec = await embeddings.array();
-            a = vec[0];
-            console.log(a);
+  db2.list({ include_docs: true }, function (err, data) {
+    // res.json(data);
+    console.log(err, data);
 
-            scores = [];
-            for (var post in posts) {
-              console.log(posts[post]["body"]);
-              b = posts[post]["body_embedding"];
+    tf2.load().then((model) => {
+      scores = [];
+      const { query } = req.body;
+      const sentences = [query];
+      model.embed(sentences).then(async (embeddings) => {
+        const vec = await embeddings.array();
+        a = vec[0];
+        for (var row in data["rows"]) {
+          b = data["rows"][row]["doc"]["body_embedding"];
+          var magnitudeA = Math.sqrt(math.dot(a, a));
+          var magnitudeB = Math.sqrt(math.dot(b, b));
+          if (magnitudeA && magnitudeB) {
+            var score = math.dot(a, b) / (magnitudeA * magnitudeB);
+            scores.push(score);
+            console.log(score);
+          } else {
+            console.log("Error");
+          }
+        }
 
-              var magnitudeA = Math.sqrt(math.dot(a, a));
-              var magnitudeB = Math.sqrt(math.dot(b, b));
-              if (magnitudeA && magnitudeB) {
-                var score = math.dot(a, b) / (magnitudeA * magnitudeB);
-                scores.push(score);
-              } else {
-                console.log("Error");
-              }
-            }
+        var list = [];
+        for (var j = 0; j < scores.length; j++) {
+          delete data["rows"][j]["doc"]["body_embedding"];
+          delete data["rows"][j]["doc"]["_id"];
+          delete data["rows"][j]["doc"]["_rev"];
+          list.push({ score: scores[j], dat: data["rows"][j] });
+        }
 
-            res.json({ scores, posts });
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+        list.sort(function (a, b) {
+          return a.score > b.score ? -1 : a.score == b.score ? 0 : 1;
+          //Sort could be modified to, for example, sort on the age
+          // if the name is the same.
+        });
+        let data_new = {};
+        for (var k = 0; k < list.length; k++) {
+          scores[k] = list[k].score;
+          data_new[k] = list[k].dat["doc"];
+        }
+
+        res.json({ scores, data_new });
       });
-
-      // res.json({ posts });
-    })
-    .catch((err) => {
-      console.log(err);
     });
+  });
 });
 
 // Add a new Post
@@ -101,38 +94,43 @@ router.post("/new-post", (req, res) => {
     res.json({ err: "Solution and Situation are Required!" });
   }
 
-  User.findOne({ _id: user.id }).then((user) => {
-    const body_embedding = [];
-    tf2
-      .load()
-      .then((model) => {
-        const sentences = [body];
-        model.embed(sentences).then(async (embeddings) => {
-          const vec = await embeddings.array();
-          a = vec[0];
-          const body_embedding = a;
+  if (user == "") {
+    _user = "@anonymous";
+  } else {
+    _user = user;
+  }
+  var today = new Date();
 
-          const post = new Post({
-            body,
-            body_embedding,
-            sol,
-            advice,
-            user,
-            likes,
-          });
+  cur_time = today;
 
-          post
-            .save()
-            .then(() => {
-              res.json({ msg: "Post Created" });
-            })
-            .catch((err) => {
-              console.log(err);
-            });
+  tf2.load().then((model) => {
+    const sentences = [body];
+    model
+      .embed(sentences)
+      .then(async (embeddings) => {
+        const vec = await embeddings.array();
+        a = vec[0];
+
+        _data = {
+          username: _user,
+          body: body,
+          sol: sol,
+          advice: advice,
+          time: cur_time,
+          body_embedding: a,
+        };
+
+        db2.insert(_data, (err) => {
+          if (err) {
+            console.log(err);
+          } else {
+            res.json({ msg: "Post Added" });
+          }
         });
       })
       .catch((err) => {
         console.log(err);
+        res.json({ msg: "Error! Post not created" });
       });
   });
 });
@@ -140,5 +138,7 @@ router.post("/new-post", (req, res) => {
 // Likes for the post
 
 // Authentication
+
+// Link everything
 
 module.exports = router;
