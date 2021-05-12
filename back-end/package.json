@@ -14,7 +14,7 @@
     "@tensorflow/tfjs": "^2.0.1",
     "@tensorflow/tfjs-node": "^2.0.1",
     "express": "^4.17.1",
-    "mathjs": "^7.0.1",
+    "mathjs": "^7.5.1",
     "mongoose": "^5.9.19"
   }
 }
