@@ -1,4 +1,4 @@
-# A Reason To Live
+# Search Engine powered Blog
 
 ## Short description
 
